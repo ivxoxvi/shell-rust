@@ -9,9 +9,12 @@ fn main() {
         let mut cmd = String::new();
         io::stdin().read_line(&mut cmd).unwrap();
         cmd = cmd.trim().to_string();
-        if cmd == "exit" {
-            break;
+
+        match cmd.trim().split(' ').collect::<Vec<_>>().as_slice() {
+            [""] | [] => {}
+            ["exit"] => break,
+            ["echo", rest @ ..] => println!("{}", rest.join(" ")),
+            [cmd, ..] => println!("{}: command not found", cmd),
         }
-        println!("{}: command not found", cmd.trim());
     }
 }
