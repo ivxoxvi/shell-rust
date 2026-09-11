@@ -8,6 +8,7 @@ fn main() {
 
         let mut cmd = String::new();
         io::stdin().read_line(&mut cmd).unwrap();
+        cmd = cmd.trim().to_string();
         if cmd == "exit" {
             break;
         }
