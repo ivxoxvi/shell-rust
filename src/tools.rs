@@ -1,4 +1,4 @@
-use std::{collections::HashMap, process::Command};
+use std::{collections::HashMap, os::unix::process::CommandExt, process::Command};
 
 use crate::utils;
 
@@ -51,7 +51,7 @@ pub fn call_external(cmd: &str, args: &[&str]) -> Output {
     match result {
         None => Output::with_err(format!("{}: command not found\n", cmd)),
         Some(file) => {
-            let output = Command::new(&file).args(args).output();
+            let output = Command::new(&file).arg0(cmd).args(args).output();
             match output {
                 Ok(output) => Output::new(
                     String::from_utf8_lossy(&output.stdout).into_owned(),
