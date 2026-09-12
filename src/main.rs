@@ -1,18 +1,8 @@
-use std::collections::HashMap;
 use std::io::{self, Write};
 
-#[derive(Clone, Copy)]
-enum CmdType {
-    Builtin,
-}
+use codecrafters_shell::tools::{self, Output};
 
 fn main() {
-    let type_map = HashMap::from([
-        ("echo", CmdType::Builtin),
-        ("exit", CmdType::Builtin),
-        ("type", CmdType::Builtin),
-    ]);
-
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
@@ -21,19 +11,15 @@ fn main() {
         io::stdin().read_line(&mut input).unwrap();
         let args: Vec<_> = input.split_whitespace().collect();
 
-        match args.as_slice() {
-            [] => {}
-            ["exit"] => break,
-            ["echo", rest @ ..] => {
-                println!("{}", rest.join(" "));
+        let output: Output = match args.as_slice() {
+            [] => Output::new_std(String::new()),
+            ["exit"] => {
+                break;
             }
-            ["type", cmd] => match type_map.get(cmd) {
-                Some(CmdType::Builtin) => println!("{} is a shell builtin", cmd),
-                None => println!("{}: not found", cmd),
-            },
-            [cmd, ..] => {
-                println!("{}: command not found", cmd);
-            }
-        }
+            [cmd, rest @ ..] => tools::call(cmd, rest),
+        };
+
+        let (stdout, stderr) = output.get_both();
+        println!("{}{}", stdout, stderr)
     }
 }
