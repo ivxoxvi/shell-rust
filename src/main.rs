@@ -12,7 +12,7 @@ fn main() {
         let args: Vec<_> = input.split_whitespace().collect();
 
         let output: Output = match args.as_slice() {
-            [] => Output::new_std(String::new()),
+            [] => Output::with_std(String::new()),
             ["exit"] => {
                 break;
             }
@@ -20,6 +20,6 @@ fn main() {
         };
 
         let (stdout, stderr) = output.get_both();
-        println!("{}{}", stdout, stderr)
+        print!("{}{}", stdout, stderr)
     }
 }

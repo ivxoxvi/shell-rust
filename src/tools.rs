@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, path::Path};
+use std::{collections::HashMap, process::Command};
 
 use crate::utils;
 
@@ -15,13 +15,13 @@ impl Output {
             err: Some(err),
         }
     }
-    pub fn new_std(s: String) -> Self {
+    pub fn with_std(s: String) -> Self {
         Output {
             std: Some(s),
             err: None,
         }
     }
-    pub fn new_err(s: String) -> Self {
+    pub fn with_err(s: String) -> Self {
         Output {
             std: None,
             err: Some(s),
@@ -42,13 +42,30 @@ pub fn call(cmd: &str, args: &[&str]) -> Output {
     match cmd {
         "echo" => echo_tool(args),
         "type" => type_tool(args),
-        cmd => Output::new_std(format!("{}: command not found", cmd)),
+        cmd => call_external(cmd, args),
+    }
+}
+
+pub fn call_external(cmd: &str, args: &[&str]) -> Output {
+    let result = utils::find_in_path(cmd);
+    match result {
+        None => Output::with_err(format!("{}: command not found\n", cmd)),
+        Some(file) => {
+            let output = Command::new(&file).args(args).output();
+            match output {
+                Ok(output) => Output::new(
+                    String::from_utf8_lossy(&output.stdout).into_owned(),
+                    String::from_utf8_lossy(&output.stderr).into_owned(),
+                ),
+                Err(e) => Output::with_err(e.to_string()),
+            }
+        }
     }
 }
 
 pub fn echo_tool(args: &[&str]) -> Output {
     match args {
-        all_args => Output::new_std(format!("{}", all_args.join(" "))),
+        all_args => Output::with_std(format!("{}\n", all_args.join(" "))),
     }
 }
 
@@ -63,18 +80,14 @@ pub fn type_tool(args: &[&str]) -> Output {
         ("type", CmdType::Builtin),
     ]);
     match args {
-        [] => Output::new_std(String::new()),
+        [] => Output::with_std(String::new()),
         [arg, ..] => match type_map.get(arg) {
-            Some(CmdType::Builtin) => Output::new_std(format!("{} is a shell builtin", arg)),
+            Some(CmdType::Builtin) => Output::with_std(format!("{} is a shell builtin\n", arg)),
             None => {
-                let result = env::var("PATH").ok().and_then(|path| {
-                    path.split(':')
-                        .map(|dir| Path::new(dir).join(arg))
-                        .find(|file| utils::can_exec(file))
-                });
+                let result = utils::find_in_path(arg);
                 match result {
-                    Some(file) => Output::new_std(format!("{arg} is {}", file.display())),
-                    None => Output::new_err(format!("{arg}: not found")),
+                    Some(file) => Output::with_std(format!("{arg} is {}\n", file.display())),
+                    None => Output::with_err(format!("{arg}: not found\n")),
                 }
             }
         },
