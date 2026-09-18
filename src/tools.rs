@@ -11,6 +11,16 @@ pub fn pwd() -> Output {
     Output::with_std(format!("{}\n", env::current_dir().unwrap().display()))
 }
 
+pub fn cd(args: &[&str]) -> Output {
+    let Some(first) = args.first() else {
+        return Output::with_none();
+    };
+    match env::set_current_dir(first) {
+        Ok(_) => Output::with_none(),
+        Err(_) => Output::with_err(format!("cd: {} No such file or directory", first)),
+    }
+}
+
 pub fn type_tool(args: &[&str]) -> Output {
     let type_map = HashMap::from([
         ("echo", CmdType::Builtin),
@@ -18,7 +28,7 @@ pub fn type_tool(args: &[&str]) -> Output {
         ("type", CmdType::Builtin),
         ("pwd", CmdType::Builtin),
     ]);
-    
+
     match args {
         [] => Output::with_std(String::new()),
         [arg, ..] => match type_map.get(arg) {

@@ -19,6 +19,14 @@ impl Output {
             err: Some(err),
         }
     }
+    
+    pub fn with_none() -> Self{
+        Output {
+            std: None,
+            err: None,
+        }
+    }
+    
     pub fn with_std(s: String) -> Self {
         Output {
             std: Some(s),
