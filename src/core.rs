@@ -1,6 +1,6 @@
 use crate::{
     builtin::{cd, echo, pwd, typeof_cmd},
-    utils,
+    util,
 };
 use std::{collections::HashMap, os::unix::process::CommandExt, process::Command};
 
@@ -77,7 +77,7 @@ pub fn call(ctx: &ShellContext, cmd: &str, args: &[&str]) -> Output {
 }
 
 fn call_external(cmd: &str, args: &[&str]) -> Output {
-    let result = utils::find_in_path(cmd);
+    let result = util::find_in_path(cmd);
     match result {
         None => Output::with_err(format!("{}: command not found\n", cmd)),
         Some(file) => {

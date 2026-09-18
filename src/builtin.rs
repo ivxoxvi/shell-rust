@@ -1,5 +1,5 @@
 use crate::core::*;
-use crate::utils;
+use crate::util;
 use std::env;
 
 pub fn echo(args: &[&str]) -> Output {
@@ -28,7 +28,7 @@ pub fn typeof_cmd(ctx: &ShellContext, args: &[&str]) -> Output {
         [arg, ..] => match ctx.builtin_fn_map.get(arg) {
             Some(_) => Output::with_std(format!("{} is a shell builtin\n", arg)),
             None => {
-                let result = utils::find_in_path(arg);
+                let result = util::find_in_path(arg);
                 match result {
                     Some(file) => Output::with_std(format!("{arg} is {}\n", file.display())),
                     None => Output::with_err(format!("{arg}: not found\n")),

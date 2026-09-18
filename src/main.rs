@@ -1,6 +1,9 @@
 use std::io::{self, Write};
 
-use codecrafters_shell::{core::{Output, call}, core::init};
+use codecrafters_shell::{
+    core::{Output, call, init},
+    util,
+};
 
 fn main() {
     let ctx = init();
@@ -10,18 +13,22 @@ fn main() {
 
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
-        let args: Vec<_> = input.split_whitespace().collect();
+        let args: Vec<_> = util::parse_cmd_input(&input);
 
-        let output: Output = match args.as_slice() {
+        let output: Output = match args
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>()
+            .as_slice()
+        {
             [] => Output::with_std(String::new()),
             ["exit"] => {
                 break;
             }
-            [cmd, rest @ ..] => call(&ctx,cmd, rest),
+            [cmd, rest @ ..] => call(&ctx, cmd, rest),
         };
 
         let (stdout, stderr) = output.get_both();
         print!("{}{}", stdout, stderr)
     }
 }
-
