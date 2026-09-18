@@ -17,7 +17,7 @@ pub fn cd(args: &[&str]) -> Output {
     };
     match env::set_current_dir(first) {
         Ok(_) => Output::with_none(),
-        Err(_) => Output::with_err(format!("cd: {} No such file or directory", first)),
+        Err(_) => Output::with_err(format!("cd: {} No such file or directory\n", first)),
     }
 }
 
@@ -27,6 +27,7 @@ pub fn type_tool(args: &[&str]) -> Output {
         ("exit", CmdType::Builtin),
         ("type", CmdType::Builtin),
         ("pwd", CmdType::Builtin),
+        ("cd", CmdType::Builtin),
     ]);
 
     match args {
