@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use codecrafters_shell::tools::{self, Output};
+use codecrafters_shell::core::{Output, call};
 
 fn main() {
     loop {
@@ -16,7 +16,7 @@ fn main() {
             ["exit"] => {
                 break;
             }
-            [cmd, rest @ ..] => tools::call(cmd, rest),
+            [cmd, rest @ ..] => call(cmd, rest),
         };
 
         let (stdout, stderr) = output.get_both();

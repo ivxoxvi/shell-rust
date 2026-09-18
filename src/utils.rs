@@ -1,6 +1,6 @@
-use std::{env, fs};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use std::{env, fs};
 
 pub fn is_file_in_dir(path: &str, filename: &str) -> bool {
     fs::read_dir(path)
