@@ -1,9 +1,14 @@
 use crate::core::*;
 use crate::utils;
 use std::collections::HashMap;
+use std::env;
 
 pub fn echo_tool(args: &[&str]) -> Output {
     Output::with_std(format!("{}\n", args.join(" ")))
+}
+
+pub fn pwd() -> Output {
+    Output::with_std(format!("{}\n", env::current_dir().unwrap().display()))
 }
 
 pub fn type_tool(args: &[&str]) -> Output {
