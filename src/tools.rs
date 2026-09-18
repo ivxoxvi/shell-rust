@@ -18,6 +18,7 @@ pub fn type_tool(args: &[&str]) -> Output {
         ("type", CmdType::Builtin),
         ("pwd", CmdType::Builtin),
     ]);
+    
     match args {
         [] => Output::with_std(String::new()),
         [arg, ..] => match type_map.get(arg) {

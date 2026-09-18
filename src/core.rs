@@ -46,6 +46,7 @@ pub fn call(cmd: &str, args: &[&str]) -> Output {
     match cmd {
         "echo" => tools::echo_tool(args),
         "type" => tools::type_tool(args),
+        "pwd" => tools::pwd(),
         cmd => call_external(cmd, args),
     }
 }
