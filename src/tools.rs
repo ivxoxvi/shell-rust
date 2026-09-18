@@ -11,6 +11,7 @@ pub fn type_tool(args: &[&str]) -> Output {
         ("echo", CmdType::Builtin),
         ("exit", CmdType::Builtin),
         ("type", CmdType::Builtin),
+        ("pwd", CmdType::Builtin),
     ]);
     match args {
         [] => Output::with_std(String::new()),
