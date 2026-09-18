@@ -3,7 +3,7 @@ use crate::util;
 use std::env;
 
 pub fn echo(args: &[&str]) -> Output {
-    Output::with_std(format!("{}", args.join(" ")))
+    Output::with_std(format!("{}\n", args.join(" ")))
 }
 
 pub fn pwd() -> Output {

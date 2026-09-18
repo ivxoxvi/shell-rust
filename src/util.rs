@@ -31,6 +31,7 @@ pub fn find_in_path(file: &str) -> Option<PathBuf> {
 }
 
 pub fn parse_cmd_input(input: &str) -> Vec<String> {
+    let input = input.strip_suffix('\n').unwrap_or(input);
     let mut args = vec![];
 
     let mut arg_start = 0;
