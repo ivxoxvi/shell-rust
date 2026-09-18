@@ -1,5 +1,8 @@
-use crate::{tools, utils};
-use std::{os::unix::process::CommandExt, process::Command};
+use crate::{
+    builtin::{cd, echo, pwd, typeof_cmd},
+    utils,
+};
+use std::{collections::HashMap, os::unix::process::CommandExt, process::Command};
 
 #[derive(Clone, Copy)]
 pub enum CmdType {
@@ -19,14 +22,14 @@ impl Output {
             err: Some(err),
         }
     }
-    
-    pub fn with_none() -> Self{
+
+    pub fn with_none() -> Self {
         Output {
             std: None,
             err: None,
         }
     }
-    
+
     pub fn with_std(s: String) -> Self {
         Output {
             std: Some(s),
@@ -50,13 +53,26 @@ impl Output {
     }
 }
 
-pub fn call(cmd: &str, args: &[&str]) -> Output {
-    match cmd {
-        "echo" => tools::echo_tool(args),
-        "type" => tools::type_tool(args),
-        "pwd" => tools::pwd(),
-        "cd" => tools::cd(args),
-        cmd => call_external(cmd, args),
+pub struct ShellContext {
+    pub builtin_fn_map: HashMap<&'static str, fn(&ShellContext, &[&str]) -> Output>,
+}
+
+pub fn init() -> ShellContext {
+    let mut builtin_fn_map: HashMap<&'static str, fn(&ShellContext, &[&str]) -> Output> =
+        HashMap::new();
+    builtin_fn_map.insert("echo", |_, args| echo(args));
+    builtin_fn_map.insert("type", typeof_cmd);
+    builtin_fn_map.insert("pwd", |_, _| pwd());
+    builtin_fn_map.insert("cd", |_, args| cd(args));
+
+    ShellContext { builtin_fn_map }
+}
+
+pub fn call(ctx: &ShellContext, cmd: &str, args: &[&str]) -> Output {
+    let builtin_fn = ctx.builtin_fn_map.get(cmd);
+    match builtin_fn {
+        Some(func) => func(ctx, args),
+        None => call_external(cmd, args),
     }
 }
 

@@ -1,8 +1,9 @@
 use std::io::{self, Write};
 
-use codecrafters_shell::core::{Output, call};
+use codecrafters_shell::{core::{Output, call}, core::init};
 
 fn main() {
+    let ctx = init();
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
@@ -16,10 +17,11 @@ fn main() {
             ["exit"] => {
                 break;
             }
-            [cmd, rest @ ..] => call(cmd, rest),
+            [cmd, rest @ ..] => call(&ctx,cmd, rest),
         };
 
         let (stdout, stderr) = output.get_both();
         print!("{}{}", stdout, stderr)
     }
 }
+

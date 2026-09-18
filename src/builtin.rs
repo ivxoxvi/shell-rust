@@ -1,9 +1,8 @@
 use crate::core::*;
 use crate::utils;
-use std::collections::HashMap;
 use std::env;
 
-pub fn echo_tool(args: &[&str]) -> Output {
+pub fn echo(args: &[&str]) -> Output {
     Output::with_std(format!("{}\n", args.join(" ")))
 }
 
@@ -12,28 +11,22 @@ pub fn pwd() -> Output {
 }
 
 pub fn cd(args: &[&str]) -> Output {
-    let Some(first) = args.first() else {
+    let Some(&target) = args.first() else {
         return Output::with_none();
     };
-    match env::set_current_dir(first) {
+    let target = target.replacen('~', &env::var("HOME").unwrap_or_default(), 1);
+    match env::set_current_dir(&target) {
         Ok(_) => Output::with_none(),
-        Err(_) => Output::with_err(format!("cd: {}: No such file or directory\n", first)),
+        Err(_) => Output::with_err(format!("cd: {}: No such file or directory\n", target)),
     }
 }
 
-pub fn type_tool(args: &[&str]) -> Output {
-    let type_map = HashMap::from([
-        ("echo", CmdType::Builtin),
-        ("exit", CmdType::Builtin),
-        ("type", CmdType::Builtin),
-        ("pwd", CmdType::Builtin),
-        ("cd", CmdType::Builtin),
-    ]);
-
+pub fn typeof_cmd(ctx: &ShellContext, args: &[&str]) -> Output {
     match args {
         [] => Output::with_std(String::new()),
-        [arg, ..] => match type_map.get(arg) {
-            Some(CmdType::Builtin) => Output::with_std(format!("{} is a shell builtin\n", arg)),
+        ["exit", ..] => Output::with_std(format!("exit is a shell builtin\n")),
+        [arg, ..] => match ctx.builtin_fn_map.get(arg) {
+            Some(_) => Output::with_std(format!("{} is a shell builtin\n", arg)),
             None => {
                 let result = utils::find_in_path(arg);
                 match result {
