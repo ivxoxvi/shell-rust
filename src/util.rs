@@ -64,7 +64,10 @@ pub fn parse_cmd_input(input: &str) -> Vec<String> {
 
         // split by whitespace
         if c.is_whitespace() {
-            args.push(remove_char(&input[arg_start..i], &jumped_inside_char));
+            let arg = remove_char(&input[arg_start..i], &jumped_inside_char);
+            if !arg.is_empty() {
+                args.push(arg);
+            }
             arg_start = i + 1;
         }
     }
