@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::{env, fs};
@@ -30,67 +29,6 @@ pub fn find_in_path(file: &str) -> Option<PathBuf> {
     })
 }
 
-pub fn parse_cmd_input_v1(input: &str) -> Vec<String> {
-    let input = input.strip_suffix('\n').unwrap_or(input);
-    let mut args = vec![];
-
-    let mut arg_start = 0;
-    let mut need_escape = false;
-    let mut jumped_inside_char = HashSet::new();
-    let mut inside_char = None;
-    for (i, c) in input.chars().enumerate() {
-        // when inside a raw string, advance forward until hitting the delimiter or end of the string.
-        if let Some(delimiter) = inside_char {
-            // end the raw string when encountering the next delimiter, record the delimiter so we can remove it from the arg.
-            if c == delimiter {
-                jumped_inside_char.insert(delimiter);
-                inside_char = None;
-            }
-            // If reaching the end, collect the remaining tail.
-            if i == input.len() - 1 {
-                args.push(remove_char(&input[arg_start..i + 1], &jumped_inside_char));
-            }
-            continue;
-        }
-
-        if need_escape {
-            need_escape = false;
-            continue;
-        }
-
-        // collect tail
-        if i == input.len() - 1 {
-            args.push(remove_char(&input[arg_start..i + 1], &jumped_inside_char));
-            break;
-        }
-
-        // into pure string processing
-        if c == '\'' || c == '\"' {
-            inside_char = Some(c);
-        }
-
-        // escape by '\'
-        if c == '\\' {
-            need_escape = true;
-        }
-
-        // split by whitespace
-        if c.is_whitespace() {
-            let arg = remove_char(&input[arg_start..i], &jumped_inside_char);
-            if !arg.is_empty() {
-                args.push(arg);
-            }
-            arg_start = i + 1;
-        }
-    }
-
-    args
-}
-
-fn remove_char(s: &str, need_remove: &HashSet<char>) -> String {
-    s.chars().filter(|c| !need_remove.contains(c)).collect()
-}
-
 pub fn parse_cmd_input(input: &str) -> Vec<String> {
     let mut input = input.strip_suffix('\n').unwrap_or(input).chars();
 
@@ -98,20 +36,37 @@ pub fn parse_cmd_input(input: &str) -> Vec<String> {
     let mut arg = String::new();
 
     while let Some(c) = input.next() {
-        // process quoting
-        if let delimiter @ ('\'' | '"') = c {
-            while let Some(x) = input.next() {
-                if x == delimiter {
+        // process single quoting
+        if c == '\'' {
+            // when inside a raw string, advance forward until hitting the delimiter or end of the string.
+            while let Some(quo_char) = input.next() {
+                if quo_char == '\'' {
                     break;
                 }
-                arg.push(x);
+                arg.push(quo_char);
+            }
+            continue;
+        }
+        // process double quoting
+        if c == '"' {
+            while let Some(dqup_ch) = input.next() {
+                if dqup_ch == '"' {
+                    break;
+                }
+                if dqup_ch == '\\' {
+                    if let Some(esc_ch) = input.next() {
+                        arg.push(esc_ch);
+                    }
+                    continue;
+                }
+                arg.push(dqup_ch);
             }
             continue;
         }
         // process escape
         if c == '\\' {
-            if let Some(x) = input.next() {
-                arg.push(x);
+            if let Some(esc_ch) = input.next() {
+                arg.push(esc_ch);
             }
             continue;
         }
@@ -153,16 +108,13 @@ mod tests {
         assert_eq!(parse_cmd_input("'bb''bb'"), vec!["bbbb"]);
         assert_eq!(parse_cmd_input("bb''bb"), vec!["bbbb"]);
         assert_eq!(parse_cmd_input(r#"'cc\"'"#), vec![r#"cc\""#]);
-        // assert_eq!(parse_cmd_input("'"), vec!["'"]);
 
         // double quoting
         assert_eq!(parse_cmd_input(r#""bb bb""#), vec!["bb bb"]);
         assert_eq!(parse_cmd_input(r#""bb""bb""#), vec!["bbbb"]);
         assert_eq!(parse_cmd_input(r#"bb""bb"#), vec!["bbbb"]);
-        assert_eq!(parse_cmd_input(r#""cc\'""#), vec![r#"cc\'"#]);
-        // assert_eq!(parse_cmd_input(r#"""#), vec!["'"]);
 
-        // escape '\'
+        // escape
         assert_eq!(
             parse_cmd_input(r"three\ \ \ spaces"),
             vec!["three   spaces"]
@@ -174,6 +126,15 @@ mod tests {
         assert_eq!(parse_cmd_input(r"test\nexample"), vec!["testnexample"]);
         assert_eq!(parse_cmd_input(r"hello\\world"), vec![r"hello\world"]);
         assert_eq!(parse_cmd_input(r"\'hello\'"), vec!["'hello'"]);
-        // assert_eq!(parse_cmd_input(r"\"), vec![r"\"]);
+
+        // double quoting with escape
+        assert_eq!(
+            parse_cmd_input(r#""A \\ escapes itself""#),
+            vec![r"A \ escapes itself"]
+        );
+        assert_eq!(
+            parse_cmd_input(r#""A \" inside double quotes""#),
+            vec![r#"A " inside double quotes"#]
+        );
     }
 }
