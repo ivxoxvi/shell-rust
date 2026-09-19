@@ -30,11 +30,12 @@ pub fn find_in_path(file: &str) -> Option<PathBuf> {
     })
 }
 
-pub fn parse_cmd_input(input: &str) -> Vec<String> {
+pub fn parse_cmd_input_v1(input: &str) -> Vec<String> {
     let input = input.strip_suffix('\n').unwrap_or(input);
     let mut args = vec![];
 
     let mut arg_start = 0;
+    let mut need_escape = false;
     let mut jumped_inside_char = HashSet::new();
     let mut inside_char = None;
     for (i, c) in input.chars().enumerate() {
@@ -52,15 +53,25 @@ pub fn parse_cmd_input(input: &str) -> Vec<String> {
             continue;
         }
 
-        // into pure string processing
-        if c == '\'' || c == '\"' {
-            inside_char = Some(c);
+        if need_escape {
+            need_escape = false;
+            continue;
         }
 
         // collect tail
         if i == input.len() - 1 {
             args.push(remove_char(&input[arg_start..i + 1], &jumped_inside_char));
             break;
+        }
+
+        // into pure string processing
+        if c == '\'' || c == '\"' {
+            inside_char = Some(c);
+        }
+
+        // escape by '\'
+        if c == '\\' {
+            need_escape = true;
         }
 
         // split by whitespace
@@ -80,24 +91,89 @@ fn remove_char(s: &str, need_remove: &HashSet<char>) -> String {
     s.chars().filter(|c| !need_remove.contains(c)).collect()
 }
 
+pub fn parse_cmd_input(input: &str) -> Vec<String> {
+    let mut input = input.strip_suffix('\n').unwrap_or(input).chars();
+
+    let mut args = vec![];
+    let mut arg = String::new();
+
+    while let Some(c) = input.next() {
+        // process quoting
+        if let delimiter @ ('\'' | '"') = c {
+            while let Some(x) = input.next() {
+                if x == delimiter {
+                    break;
+                }
+                arg.push(x);
+            }
+            continue;
+        }
+        // process escape
+        if c == '\\' {
+            if let Some(x) = input.next() {
+                arg.push(x);
+            }
+            continue;
+        }
+        // process whitespace
+        if c.is_whitespace() {
+            if !arg.is_empty() {
+                args.push(arg);
+                arg = String::new();
+            }
+            continue;
+        }
+        // process regular char
+        arg.push(c);
+    }
+    // collect tail
+    if !arg.is_empty() {
+        args.push(arg);
+    }
+
+    args
+}
+
 #[cfg(test)]
 mod tests {
     use super::parse_cmd_input;
 
     #[test]
     fn test_parse_cmd_input() {
+        // empty
         assert_eq!(parse_cmd_input(""), Vec::<&str>::new());
+        assert_eq!(parse_cmd_input("a\n"), vec!["a"]);
 
+        // basic
         assert_eq!(parse_cmd_input("aaa"), vec!["aaa"]);
         assert_eq!(parse_cmd_input("aa aa"), vec!["aa", "aa"]);
 
-        assert_eq!(parse_cmd_input("''"), vec![""]);
+        // single quoting
         assert_eq!(parse_cmd_input("'bb bb'"), vec!["bb bb"]);
         assert_eq!(parse_cmd_input("'bb''bb'"), vec!["bbbb"]);
         assert_eq!(parse_cmd_input("bb''bb"), vec!["bbbb"]);
+        assert_eq!(parse_cmd_input(r#"'cc\"'"#), vec![r#"cc\""#]);
+        // assert_eq!(parse_cmd_input("'"), vec!["'"]);
 
-        assert_eq!(parse_cmd_input("'cc\"'"), vec!["cc\""]);
+        // double quoting
+        assert_eq!(parse_cmd_input(r#""bb bb""#), vec!["bb bb"]);
+        assert_eq!(parse_cmd_input(r#""bb""bb""#), vec!["bbbb"]);
+        assert_eq!(parse_cmd_input(r#"bb""bb"#), vec!["bbbb"]);
+        assert_eq!(parse_cmd_input(r#""cc\'""#), vec![r#"cc\'"#]);
+        // assert_eq!(parse_cmd_input(r#"""#), vec!["'"]);
 
-        assert_eq!(parse_cmd_input("'"), vec!["'"]);
+        // escape '\'
+        assert_eq!(
+            parse_cmd_input(r"three\ \ \ spaces"),
+            vec!["three   spaces"]
+        );
+        assert_eq!(
+            parse_cmd_input(r"before\     after"),
+            vec!["before ", "after"]
+        );
+        assert_eq!(parse_cmd_input(r"test\nexample"), vec!["testnexample"]);
+        assert_eq!(parse_cmd_input(r"hello\\world"), vec![r"hello\world"]);
+        assert_eq!(parse_cmd_input(r"\'hello\'"), vec!["'hello'"]);
+        // assert_eq!(parse_cmd_input(r"\"), vec![r"\"]);
     }
 }
